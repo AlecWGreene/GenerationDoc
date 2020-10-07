@@ -1,5 +1,6 @@
 import Language from "../models/language";
 
+// JavaScript breakdown
 const identifierRule = /[A-Za-z\$\_][\w\$\_]*/
 const types: string[] = ["const", "let", "var"];
 const qualifiers: string[] = ["static", "async"];
@@ -15,7 +16,8 @@ const signatures = {
     "class_standard": `class <<identifier#name#>>{`,
     "class_extends": `class <<identifier#name#>> extends <<identifier#parent#>>{`,
 
-    "class_property": `this.<<identifier#name#>>=`,
+    "class_property_standard": `this.<<identifier#name#>>=`,
+    "class_property_prototype": `<<identifier#parent#>>.prototype.<<identifier#name#>>=`,
     "class_property_static": `<<identifier#parent#>>.<<identifier#name#>>=`,
 
     "class_method": `<< *?qualifier#qualifiers#>> <<identifier#name#>>(<<arguments_standard#arguments#>>){`,

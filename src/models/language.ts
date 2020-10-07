@@ -34,6 +34,9 @@ class Language {
         }
     }
 
+    /**
+     * Transforms a Hancock expression into a Regular Expression using the language's features 
+     */
     parseHancockExpression(expression: string): RegExp{
         // Replace Identifier, type, and qualifier tokens
         let exp = expression.replace(/\<\<(?<space>\s)?(?<star>\*)?(?<conditional>\?)?identifier\#(?<token_name>[\w\_]+)\#\>\>/g,`\(\?\<$<token_name>\>\(\?\:${this.identifierRule}$<space>\)$<star>\)$<conditional>`);

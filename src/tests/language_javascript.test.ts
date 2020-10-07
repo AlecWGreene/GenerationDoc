@@ -188,4 +188,46 @@ describe("Testing language: JavaScript", () => {
         });
        
     });
+
+    describe("Class signatures", () => {
+        test("standard", () => {
+            const data = "class $test_Class{".match(javascript.expressions.class_standard);
+            expect(data?.groups).toEqual({
+                name: "$test_Class"
+            });
+        });
+
+        test("extended", () => {
+            const data = "class $test_Class extends _test_Interface{".match(javascript.expressions.class_extends);
+            expect(data?.groups).toEqual({
+                name: "$test_Class",
+                parent: "_test_Interface"
+            });
+        });
+    });
+
+    describe("Property signatures", () => {
+        test("standard", () => {
+            const data = "this.$test_var =".match(javascript.expressions.class_property_standard);
+            expect(data?.groups).toEqual({
+                name: "$test_var"
+            });
+        });
+
+        test("class prototype", () => {
+            const data = "_test$Class.prototype.$test_Var =".match(javascript.expressions.class_property_prototype);
+            expect(data?.groups).toEqual({
+                name: "$test_Var",
+                parent: "_test$Class"
+            });
+        });
+
+        test("class static", () => {
+            const data = "_test$Class.$test_Var =".match(javascript.expressions.class_property_static);
+            expect(data?.groups).toEqual({
+                name: "$test_Var",
+                parent: "_test$Class"
+            });
+        });
+    });
 })

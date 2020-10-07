@@ -5,6 +5,7 @@
   "main": "app.js",
   "scripts": {
     "test_all": "jest /tests/*",
+    "test_scraper": "jest --verbose /tests/scraper.test.ts",
     "test_language": "jest --verbose /tests/language.test.ts",
     "test_language_js": "jest --verbose /tests/language_javascript.test.ts",
     "test_scraper": "jest --verbose /tests/codeScraper.test.ts",
