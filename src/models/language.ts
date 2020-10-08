@@ -59,6 +59,7 @@ class Language {
         exp = exp.replace(/{/g, "\\s*{");
         exp = exp.replace(/=/g, "\\s*=\\s*");
         exp = exp.replace(/=>/g, "\\s*=>\\s*");
+        exp = exp.replace(/\./g, "\\.");
         return new RegExp(exp, "m");
     }
 

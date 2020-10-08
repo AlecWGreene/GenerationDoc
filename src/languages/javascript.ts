@@ -20,7 +20,7 @@ const signatures = {
     "class_property_prototype": `<<identifier#parent#>>.prototype.<<identifier#name#>>=`,
     "class_property_static": `<<identifier#parent#>>.<<identifier#name#>>=`,
 
-    "class_method": `<< *?qualifier#qualifiers#>> <<identifier#name#>>(<<arguments_standard#arguments#>>){`,
+    "class_method": `<< *?qualifier#qualifiers#>><<identifier#name#>>(<<arguments_standard#arguments#>>){`,
 
     "class_prototype_function_anonymous": `<<identifier#parent#>>.prototype.<<identifier#name#>>=<< *?qualifier#qualifiers#>>function(<<arguments_standard#arguments#>>){`,
     "class_prototype_function_anonymous_arrow": `<<identifier#parent#>>.prototype.<<identifier#name#>>=<< *?qualifier#qualifiers#>><<arguments_arrow#arguments#>>=>{`,
