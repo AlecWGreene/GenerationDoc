@@ -108,7 +108,6 @@ this.name = "testScope";
                 }
             }
             
-            // Greed a friend
             Animal.prototype.greetFriend = () => this.speak();
             
             // Feed the pet
@@ -224,52 +223,60 @@ this.name = "testScope";
                 }
             }`;
             let nodes: { [key: number]: { value: Node, keyRef: number } } = {};
-            beforeAll(() => {
+            beforeEach(() => {
+                const scraper = new CodeScraper(languages.javascript);
                 nodes = scraper.scrape(data);
             });
 
             test("THEN root nodes are statements made at the global scope", () => {
                 const nodeValues = Object.values(nodes);
-                let node = nodeValues.pop();
-                while(node && !node.value.parent){
+                const rootNodes = [];
+                for(const node of nodeValues.filter(n => n.value.parent === undefined)){
                     node.value.children = [];
                     expect([
-                        new Node({ name: "Animal", type: "const", signature: "class_standard"}, undefined, []),
-                        new Node({ name: "greetFriend", arguments: "($brand, amount, dish) ", parent: "Animal", signature: "class_prototype_function_anonymous_arrow"}, undefined, []),
+                        new Node({ name: "Animal", signature: "class_standard"}, undefined, []),
+                        new Node({ name: "feed", arguments: "($brand, amount, dish)", parent: "Animal", signature: "class_prototype_function_anonymous_arrow"}, undefined, []),
+                        new Node({ name: "greetFriend", arguments: "()", parent: "Animal", signature: "class_prototype_function_anonymous_arrow"}, undefined, []),
                         new Node({ name: "removeFriend", arguments: "animal ", parent: "Animal", signature: "class_prototype_function_anonymous_arrow" },undefined,[]),
                         new Node({ name: "makeFriend", arguments: "(animal)", parent: "Animal", signature: "class_prototype_function_anonymous" },undefined,[]),
                         new Node({ name: "takeForWalk", arguments: "(location, distance, pace)", parent: "Animal", signature: "class_prototype_function_anonymous" },undefined,[]),
-                        new Node({ name: "Dog", parent: "Animal", signature: "class_standard" },undefined,[]),
+                        new Node({ name: "Dog", parent: "Animal", signature: "class_extends" },undefined,[]),
                         new Node({ name: "Dog", arguments: "()", qualifiers: "async ", parent: "Dog", signature: "class_prototype_function_anonymous_arrow" },undefined,[]),
                         new Node({ name: "count", parent: "Dog", signature: "class_property_static" },undefined,[]),
+                        new Node({ name: "come", parent: "Dog", signature: "class_prototype_function_anonymous_arrow", arguments: "()", qualifiers: "async "}),
                         new Node({ name: "initDogs", arguments: "()", signature: "function_standard" },undefined,[]),
                         new Node({ name: "addMyDogs", arguments: "(cost, time, dogList)", signature: "function_standard" },undefined,[]),
                         new Node({ name: "walkDogs", arguments: "()", type: "const", signature: "function_anonymous_arrow" },undefined,[]),
-                        new Node({ name: "feedDogs", arguments: "(brand, amount, dish)", type: "let", signature: "function_anonymous" },undefined,[])
-                    ]).toContain(node.value);
-                    node = nodeValues.pop();
+                        new Node({ name: "feedDogs", arguments: "(brand, amount, dish)", type: "let", signature: "function_anonymous" },undefined,[]),
+                        new Node({ name: "count", parent: "Dog", signature: "class_property_static"})
+                    ]).toContainEqual(node.value);
+                    rootNodes.push(node);
                 }
-                expect(nodeValues.length).toEqual(12);
+                expect(rootNodes.length).toEqual(13);
             });
 
             test("THEN only root nodes have undefined parents", () => {
                 const nodeValues = Object.values(nodes).map(obj => obj.value);
                 for (let node of nodeValues) {
                     if (!node.parent) {
+                        node.children = [];
                         expect([
-                            new Node({ name: "Animal", type: "const", signature: "class_standard"}, undefined, []),
-                            new Node({ name: "greetFriend", arguments: "($brand, amount, dish) ", parent: "Animal", signature: "class_prototype_function_anonymous_arrow"}, undefined, []),
+                            new Node({ name: "Animal", signature: "class_standard"}, undefined, []),
+                            new Node({ name: "feed", arguments: "($brand, amount, dish)", parent: "Animal", signature: "class_prototype_function_anonymous_arrow"}, undefined, []),
+                            new Node({ name: "greetFriend", arguments: "()", parent: "Animal", signature: "class_prototype_function_anonymous_arrow"}, undefined, []),
                             new Node({ name: "removeFriend", arguments: "animal ", parent: "Animal", signature: "class_prototype_function_anonymous_arrow" },undefined,[]),
                             new Node({ name: "makeFriend", arguments: "(animal)", parent: "Animal", signature: "class_prototype_function_anonymous" },undefined,[]),
                             new Node({ name: "takeForWalk", arguments: "(location, distance, pace)", parent: "Animal", signature: "class_prototype_function_anonymous" },undefined,[]),
-                            new Node({ name: "Dog", parent: "Animal", signature: "class_standard" },undefined,[]),
+                            new Node({ name: "Dog", parent: "Animal", signature: "class_extends" },undefined,[]),
                             new Node({ name: "Dog", arguments: "()", qualifiers: "async ", parent: "Dog", signature: "class_prototype_function_anonymous_arrow" },undefined,[]),
                             new Node({ name: "count", parent: "Dog", signature: "class_property_static" },undefined,[]),
+                            new Node({ name: "come", parent: "Dog", signature: "class_prototype_function_anonymous_arrow", arguments: "()", qualifiers: "async "}),
                             new Node({ name: "initDogs", arguments: "()", signature: "function_standard" },undefined,[]),
                             new Node({ name: "addMyDogs", arguments: "(cost, time, dogList)", signature: "function_standard" },undefined,[]),
                             new Node({ name: "walkDogs", arguments: "()", type: "const", signature: "function_anonymous_arrow" },undefined,[]),
-                            new Node({ name: "feedDogs", arguments: "(brand, amount, dish)", type: "let", signature: "function_anonymous" },undefined,[])
-                        ]).toContain(node);
+                            new Node({ name: "feedDogs", arguments: "(brand, amount, dish)", type: "let", signature: "function_anonymous" },undefined,[]),
+                            new Node({ name: "count", parent: "Dog", signature: "class_property_static"})
+                        ]).toContainEqual(node);
                     }
                 }
             });

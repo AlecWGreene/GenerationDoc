@@ -57,9 +57,12 @@ class Language {
         exp = exp.replace(/ /g,"\\s+");
         exp = exp.replace(/\)\(/g, ")\\s*(");
         exp = exp.replace(/{/g, "\\s*{");
-        exp = exp.replace(/=/g, "\\s*=\\s*");
         exp = exp.replace(/=>/g, "\\s*=>\\s*");
+        exp = exp.replace(/=(?!>)/g, "\\s*=\\s*");
         exp = exp.replace(/\./g, "\\.");
+
+        // Require an EOL char to precede the match
+        exp = "\(\?\<\=[\\n\\r;]|^\)\\s*" + exp;
         return new RegExp(exp, "m");
     }
 

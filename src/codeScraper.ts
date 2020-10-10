@@ -1,5 +1,6 @@
 import Language from "./models/language";
 import * as languages from "./languages";
+import * as fs from "fs";
 
 export class Node {
     parent: Node | undefined
@@ -43,7 +44,7 @@ export class Node {
  */
 export default class CodeScraper {
     language: Language
-    static leafExpression: RegExp = /(?<node_name>[\s\w\.\=\-\_\[\]\:\(\)\!\?\"\'\`\$\+\,\&\^\%\>\<\/\|]*){(?<node_body>[\s\w\.\=\-\_\[\]\:\(\)\!\?\"\'\`\$\+\,\&\^\%\>\<\/\|;\*\@\#]*)\s*}/gm
+    static leafExpression: RegExp = /(?<node_name>[\s\w\.\=\-\_\[\]\:\(\)\!\?\"\'\`\$\+\,\&\^\%\>\<\/\|]*{)(?<node_body>[\s\w\.\=\-\_\[\]\:\(\)\!\?\"\'\`\$\+\,\&\^\%\>\<\/\|;\*\@\#]*)\s*}/gm
     static statementExpression: RegExp = /[^;\n\r]+(?=;|\n|\r|$)/gm
 
     constructor(language: Language, settings?: { include?: { functions?: Boolean, properties?: Boolean, classes?: Boolean} }) {
@@ -55,7 +56,7 @@ export default class CodeScraper {
         const matches = text.match(CodeScraper.leafExpression);
         if(matches !== null && matches !== undefined) {
             return matches.map(m => m !== null ? 
-                                    m.match(/(?<node_name>[\s\w\.\=\-\_\[\]\:\(\)\!\?\"\'\`\$\+\,\&\^\%\>\<\/\|]*){(?<node_body>[\s\w\.\=\-\_\[\]\:\(\)\!\?\"\'\`\$\+\,\&\^\%\>\<\/\|;\*\@\#]*)\s*}/m)?.groups 
+                                    m.match(/(?<node_name>[\s\w\.\=\-\_\[\]\:\(\)\!\?\"\'\`\$\+\,\&\^\%\>\<\/\|]*{)(?<node_body>[\s\w\.\=\-\_\[\]\:\(\)\!\?\"\'\`\$\+\,\&\^\%\>\<\/\|;\*\@\#]*\s*})/m)?.groups 
                                     : undefined);
         }
 
@@ -66,10 +67,22 @@ export default class CodeScraper {
         for (const signature of Object.entries(this.language.expressions)) {
             const match = text.match(new RegExp(signature[1]));
             if (match !== null && match.groups !== undefined) {
-                const nodeData = match.groups;
+                const nodeData: any = {};
+
+                // Copy defined fields to nodeData and append the signature
+                for(const prop in match.groups){
+                    if (match.groups[prop]) {
+                        nodeData[prop] = match.groups[prop];
+                    }
+                }
                 nodeData.signature = signature[0];
+
                 return new Node(nodeData);
             }
+        }
+
+        if (text.match(/((?:if|switch|for|when|else if)\s*\([^;\n\r\(\)]+\)\s*)|(else\s*){/m)) {
+            return new Node({ name: "##PLACEHOLDER##"});
         }
 
         return undefined;
@@ -111,32 +124,80 @@ export default class CodeScraper {
                 }
                 else{
                     // Collect nodes
-                    const node = this.convertStatementToNode(scope.node_name);
+                    const nameNode = this.convertStatementToNode(scope.node_name);
                     const nodeArray = this.parseScope(scope.node_body);
-                    const placeholderArray = scope.node_body.match(/##node-(?<id>\d+)##/gm)?.map(match => nodeDirectory[Number(match)].value);
-                    const childNodeArray = placeholderArray ? nodeArray.concat(placeholderArray) : nodeArray;
+                    const placeholderArray = scope.node_body.match(/##node-(?<id>\d+)##/gm)?.map(match => nodeDirectory[Number(match.match(/##node-(?<id>\d+)##/m)?.groups?.id)].value);
 
-                    // Update parents
-                    childNodeArray.forEach(n => {
-                        n.setParent(node);
-                        let newId = Object.keys(nodeDirectory).length;
-                        nodeDirectory[newId] = {
-                            value: n ? n : new Node({ name: "##ERROR##"}), 
-                            keyRef: newId
-                        };
-                    });
+                    // Select all retrieved nodes
+                    if (nodeArray.length > 0 && placeholderArray) {
+                        // Update parents
+                        const childNodeArray = nodeArray.concat(placeholderArray);
+                        childNodeArray.forEach(n => {
+                            n.setParent(nameNode);
+                            let newId = Object.keys(nodeDirectory).length;
+                            nodeDirectory[newId] = {
+                                value: n, 
+                                keyRef: newId
+                            };
+                        });
+                    }
+                    else if (nodeArray.length > 0) {
+                        // Update parents
+                        nodeArray.forEach(n => {
+                            n.setParent(nameNode);
+                            let newId = Object.keys(nodeDirectory).length;
+                            nodeDirectory[newId] = {
+                                value: n, 
+                                keyRef: newId
+                            };
+                        });
+                    }
+                    else if (placeholderArray) {
+                        // Update parents
+                        placeholderArray.forEach(n => {
+                            n.setParent(nameNode);
+                            let newId = Object.keys(nodeDirectory).length;
+                            nodeDirectory[newId] = {
+                                value: n, 
+                                keyRef: newId
+                            };
+                        });
+                    }
 
                     // Replace scope with node placeholder and store the node in the directory
                     let newId = Object.keys(nodeDirectory).length;
+                    const scopeText = scope.node_name + scope.node_body;
+                    dataText = dataText.replace(scopeText, `##node-${newId}##`);
                     nodeDirectory[newId] = {
-                        value: node ? node : new Node({ name: "##ERROR##"}), 
+                        value: nameNode ? nameNode : new Node({ name: "##PLACEHOLDER##"}), 
                         keyRef: newId
                     };
-                    dataText.replace(scope.node_name + scope.node_body, `##node-${newId}##`);
+                    fs.writeFileSync(__dirname + `/../test-data/app-scope-${Object.values(nodeDirectory).length}.txt`, dataText);
                 }
             }
         }
 
+        // Collect global assignments that were not found
+        const globalNodes = this.parseScope(dataText);
+        globalNodes.forEach(node => {
+            let newId = Object.keys(nodeDirectory).length;
+            nodeDirectory[newId] = {
+                value: node, 
+                keyRef: newId
+            };
+        });
+
+        // Write node directory to file
+        const visited = new WeakSet();
+        fs.writeFileSync(__dirname + `/../test-data/app-node-directory.txt`, JSON.stringify(nodeDirectory, (key, value) => {
+            if (typeof value === "object" && value !== null) {
+              if (visited.has(value)) {
+                return key;
+              }
+              visited.add(value);
+            }
+            return value;
+          }, "\t"));
         return nodeDirectory;
     }
 }
