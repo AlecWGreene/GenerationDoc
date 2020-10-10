@@ -30,22 +30,22 @@ describe("Testing model: Language", () => {
     describe("Parses Hancock expressions", () => {
         
         test("successfully for example function expression", () => {
-            expect(lang.parseHancockExpression(lang.signatures.function)).toEqual(/public\s+(?<qualifier>(?:static\s+))?(?<type>(?:float|string|void))\s+(?<name>(?:\w+))\s*(?<arguments>(?:\(\s*(?:\w+,\s*)*\w+\s*\)))\s*{/m);
+            expect(lang.parseHancockExpression(lang.signatures.function)).toEqual(/(?<=[\n\r;]|^)\s*public\s+(?<qualifier>(?:static\s+))?(?<type>(?:float|string|void))\s+(?<name>(?:\w+))\s*(?<arguments>(?:\(\s*(?:\w+,\s*)*\w+\s*\)))\s*{/m);
         });
 
         test("successfully for example variable expression", () => {
-            expect(lang.parseHancockExpression(lang.signatures.variable)).toEqual(/(?<type>(?:float|string|void))\s*(?<name>(?:\w+))\s*=\s*/m);
+            expect(lang.parseHancockExpression(lang.signatures.variable)).toEqual(/(?<=[\n\r;]|^)\s*(?<type>(?:float|string|void))\s*(?<name>(?:\w+))\s*=\s*/m);
         });
     });
 
     describe("Initializes expressions correctly", () => {
         
         test("for function example", () => {
-            expect(lang.expressions.function).toEqual(/public\s+(?<qualifier>(?:static\s+))?(?<type>(?:float|string|void))\s+(?<name>(?:\w+))\s*(?<arguments>(?:\(\s*(?:\w+,\s*)*\w+\s*\)))\s*{/m);
+            expect(lang.expressions.function).toEqual(/(?<=[\n\r;]|^)\s*public\s+(?<qualifier>(?:static\s+))?(?<type>(?:float|string|void))\s+(?<name>(?:\w+))\s*(?<arguments>(?:\(\s*(?:\w+,\s*)*\w+\s*\)))\s*{/m);
         });
 
         test("for variable example", () => {
-            expect(lang.expressions.variable).toEqual(/(?<type>(?:float|string|void))\s*(?<name>(?:\w+))\s*=\s*/m);
+            expect(lang.expressions.variable).toEqual(/(?<=[\n\r;]|^)\s*(?<type>(?:float|string|void))\s*(?<name>(?:\w+))\s*=\s*/m);
         });
     });
 });
