@@ -199,6 +199,14 @@ this.name = "testScope";
                     console.log(" is coming!");
                 },5000);
             } 
+
+            function Person(name){
+                this.name = name;
+                this.species = "human";
+                this.sound = "wololo";
+            }
+
+            Person.prototype.speak = () => console.log(this.sound);
             
             Dog.count = 0;
             
@@ -223,6 +231,7 @@ this.name = "testScope";
                 }
             }`;
             let nodes: { [key: number]: { value: Node, keyRef: number } } = {};
+            let nodeGraph: Node[];
             beforeEach(() => {
                 const scraper = new CodeScraper(languages.javascript);
                 nodes = scraper.scrape(data);
@@ -248,11 +257,13 @@ this.name = "testScope";
                         new Node({ name: "addMyDogs", arguments: "(cost, time, dogList)", signature: "function_standard" },undefined,[]),
                         new Node({ name: "walkDogs", arguments: "()", type: "const", signature: "function_anonymous_arrow" },undefined,[]),
                         new Node({ name: "feedDogs", arguments: "(brand, amount, dish)", type: "let", signature: "function_anonymous" },undefined,[]),
-                        new Node({ name: "count", parent: "Dog", signature: "class_property_static"})
+                        new Node({ name: "count", parent: "Dog", signature: "class_property_static"}),
+                        new Node({ name: "Person", arguments: "(name)", signature: "function_standard"},undefined,[]),
+                        new Node({ name: "speak", arguments: "()", parent: "Person", signature: "class_prototype_function_anonymous_arrow"},undefined,[])
                     ]).toContainEqual(node.value);
                     rootNodes.push(node);
                 }
-                expect(rootNodes.length).toEqual(13);
+                expect(rootNodes.length).toEqual(15);
             });
 
             test("THEN only root nodes have undefined parents", () => {
@@ -275,10 +286,23 @@ this.name = "testScope";
                             new Node({ name: "addMyDogs", arguments: "(cost, time, dogList)", signature: "function_standard" },undefined,[]),
                             new Node({ name: "walkDogs", arguments: "()", type: "const", signature: "function_anonymous_arrow" },undefined,[]),
                             new Node({ name: "feedDogs", arguments: "(brand, amount, dish)", type: "let", signature: "function_anonymous" },undefined,[]),
-                            new Node({ name: "count", parent: "Dog", signature: "class_property_static"})
+                            new Node({ name: "count", parent: "Dog", signature: "class_property_static"}),
+                            new Node({ name: "Person", arguments: "(name)", signature: "function_standard"},undefined,[]),
+                            new Node({ name: "speak", arguments: "()", parent: "Person", signature: "class_prototype_function_anonymous_arrow"},undefined,[])
                         ]).toContainEqual(node);
                     }
                 }
+            });
+
+            test("THEN classes, constructors, and global functions are identified",()=>{
+                nodeGraph = scraper.parseNodeDirectory(nodes);
+                nodeGraph.forEach(n => {
+                    expect(["class_standard", "class_extends", "function_standard", "function_anonymous", "function_anonymous_arrow"]).toContainEqual(n.data.signature);
+                });
+            });
+    
+            test("THEN nodes are assembled into a directed acyclic graph",()=>{
+                
             });
         });
     });

@@ -189,15 +189,32 @@ export default class CodeScraper {
 
         // Write node directory to file
         const visited = new WeakSet();
-        fs.writeFileSync(__dirname + `/../test-data/app-node-directory.txt`, JSON.stringify(nodeDirectory, (key, value) => {
+        fs.writeFileSync(__dirname + `/../test-data/app-node-directory.json`, JSON.stringify(nodeDirectory, (key, value) => {
             if (typeof value === "object" && value !== null) {
               if (visited.has(value)) {
-                return key;
+                return (key === "value") ? value : ((key === "data") ? value.name : key);
               }
               visited.add(value);
             }
             return value;
           }, "\t"));
         return nodeDirectory;
+    }
+
+    // Convert a node directory into a readable tree of code expressions
+    parseNodeDirectory(directory: { [key: number]: { value: Node, keyRef: number } }): Node[] {
+        // Get nodes with undefined parents
+        const entries = Object.values(directory);
+        let rootNodes = entries.filter(obj => obj.value.parent === undefined).map(obj => obj.value);
+
+        // Remove nodes which have parents in their data
+        rootNodes.forEach(node => {
+            if (node.data.parent) {
+                node.parent = entries.find(ent => ent.value.data.name === node.data.parent)?.value;
+            }
+        });
+        rootNodes = rootNodes.filter(node => node.parent === undefined);
+
+        return rootNodes;
     }
 }
