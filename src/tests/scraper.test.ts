@@ -1,4 +1,5 @@
 import CodeScraper from "../codeScraper";
+import * as fs from "fs";
 import { Node } from "../codeScraper";
 import * as languages from "../languages/index";
 
@@ -302,7 +303,65 @@ this.name = "testScope";
             });
     
             test("THEN nodes are assembled into a directed acyclic graph",()=>{
+                nodeGraph = scraper.parseNodeDirectory(nodes);
+
+                // Parse each root node a tree root
+                let tree: {[key: string]: Node[]} = {};
+                nodeGraph.forEach(n => {
+                    tree[n.data.name] = [n];
+                });
+
+                // Distribute nodes to their parents
+                Object.values(nodes).forEach(({ value }) => {
+                    const n = value;
+
+                    // Skip root nodes
+                    if(nodeGraph.includes(n)) {
+                        return;
+                    }
+                    // Skip placeholder nodes
+                    else if(n.data.name === "##PLACEHOLDER##"){
+                        return;
+                    }
+                    // Skip duplicates
+                    else if(Object.values(tree).find(arrar => arrar.find(arrayEntry => arrayEntry.data.name === n.data.name))){
+                        return;
+                    }
+
+                    // Find the parent
+                    let node: Node | undefined = n;
+                    while(node?.parent && node.data.signature !== "class_extends"){
+                        node = node?.parent;
+                    }
+
+                    // Assign node to the parent array
+                    const root = nodeGraph.find(root => root.data.name === node?.data.name);
+                    if(root){
+                        tree[root.data.name].push(n);
+                    }
+                });
+
+                // Write data to file
+                const returnData: { [key: string]: { name: string | undefined, arguments: string | undefined, signature: string | undefined}[]} = {};
+                for (const rootName in tree) {
+                    returnData[rootName] = tree[rootName].map(obj => {
+                        return {
+                            name: obj.data.name,
+                            arguments: obj.data.arguments,
+                            signature: obj.data.signature
+                        };
+                    });
+                }
+                fs.writeFileSync(__dirname + "/../../test-data/app-node-tree.json", JSON.stringify(returnData, undefined, "\t"));
                 
+                // Check that the nodes are assigned correctly
+                expect(returnData["Animal"].length).toEqual(11);
+                expect(returnData["Dog"].length).toEqual(8);
+                expect(returnData["Person"].length).toEqual(5);
+                expect(returnData["initDogs"].length).toEqual(1);
+                expect(returnData["addMyDogs"].length).toEqual(1);
+                expect(returnData["walkDogs"].length).toEqual(1);
+                expect(returnData["feedDogs"].length).toEqual(1);
             });
         });
     });

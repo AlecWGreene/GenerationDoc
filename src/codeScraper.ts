@@ -7,14 +7,14 @@ export class Node {
     children: Node[]
     data: {
         parent?: string
-        name?: string
+        name: string
         type?: string
         qualifiers?: string
         arguments?: string
         signature?: string
     }
 
-    constructor(data: { [key: string]: string}, parent?: Node, children?: Node[]) {
+    constructor(data: { name: string, [key: string]: string}, parent?: Node, children?: Node[]) {
         this.data = data;
         this.parent = parent;
         this.children = children === undefined ? [] : children;
@@ -189,15 +189,28 @@ export default class CodeScraper {
 
         // Write node directory to file
         const visited = new WeakSet();
-        fs.writeFileSync(__dirname + `/../test-data/app-node-directory.json`, JSON.stringify(nodeDirectory, (key, value) => {
+        function reduceDirectoryNode(this: any, key: string, value: any){
             if (typeof value === "object" && value !== null) {
-              if (visited.has(value)) {
-                return (key === "value") ? value : ((key === "data") ? value.name : key);
-              }
-              visited.add(value);
-            }
+                if (key === "parent") {
+                    return value.data.name;
+                }
+                else if (visited.has(value)) {
+                    switch(key) {
+                        case "value":
+                            return value;
+                        case "data":
+                            return value.data;
+                        case "parent":
+                            return value.data.name;
+                        default:
+                            return key;
+                    }
+                }
+                visited.add(value);
+            }    
             return value;
-          }, "\t"));
+        }
+        fs.writeFileSync(__dirname + `/../test-data/app-node-directory.json`, JSON.stringify(nodeDirectory, reduceDirectoryNode, "\t"));
         return nodeDirectory;
     }
 
@@ -207,9 +220,9 @@ export default class CodeScraper {
         const entries = Object.values(directory);
         let rootNodes = entries.filter(obj => obj.value.parent === undefined).map(obj => obj.value);
 
-        // Remove nodes which have parents in their data
+        // Remove nodes which have parents in their data except for classes
         rootNodes.forEach(node => {
-            if (node.data.parent) {
+            if (node.data.parent && node.data.signature !== "class_extends") {
                 node.parent = entries.find(ent => ent.value.data.name === node.data.parent)?.value;
             }
         });
