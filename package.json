@@ -9,7 +9,8 @@
     "test_language": "jest --verbose /tests/language.test.ts",
     "test_language_js": "jest --verbose /tests/language_javascript.test.ts",
     "build": "tsc",
-    "app": "node ./lib/app.js"
+    "app": "node ./lib/app.js",
+    "generateDoc": "node ./lib/app.js"
   },
   "author": "Alec W Greene",
   "license": "ISC",

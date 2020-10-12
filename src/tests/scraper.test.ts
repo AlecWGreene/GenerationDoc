@@ -232,7 +232,7 @@ this.name = "testScope";
                 }
             }`;
             let nodes: { [key: number]: { value: Node, keyRef: number } } = {};
-            let nodeGraph: Node[];
+            let nodeGraph: { [key: string]: Node[] };
             beforeEach(() => {
                 const scraper = new CodeScraper(languages.javascript);
                 nodes = scraper.scrape(data);
@@ -297,49 +297,13 @@ this.name = "testScope";
 
             test("THEN classes, constructors, and global functions are identified",()=>{
                 nodeGraph = scraper.parseNodeDirectory(nodes);
-                nodeGraph.forEach(n => {
-                    expect(["class_standard", "class_extends", "function_standard", "function_anonymous", "function_anonymous_arrow"]).toContainEqual(n.data.signature);
+                Object.values(nodeGraph).forEach(array => {
+                    expect(["class_standard", "class_extends", "function_standard", "function_anonymous", "function_anonymous_arrow"]).toContainEqual(array[0].data.signature);
                 });
             });
     
             test("THEN nodes are assembled into a directed acyclic graph",()=>{
-                nodeGraph = scraper.parseNodeDirectory(nodes);
-
-                // Parse each root node a tree root
-                let tree: {[key: string]: Node[]} = {};
-                nodeGraph.forEach(n => {
-                    tree[n.data.name] = [n];
-                });
-
-                // Distribute nodes to their parents
-                Object.values(nodes).forEach(({ value }) => {
-                    const n = value;
-
-                    // Skip root nodes
-                    if(nodeGraph.includes(n)) {
-                        return;
-                    }
-                    // Skip placeholder nodes
-                    else if(n.data.name === "##PLACEHOLDER##"){
-                        return;
-                    }
-                    // Skip duplicates
-                    else if(Object.values(tree).find(arrar => arrar.find(arrayEntry => arrayEntry.data.name === n.data.name))){
-                        return;
-                    }
-
-                    // Find the parent
-                    let node: Node | undefined = n;
-                    while(node?.parent && node.data.signature !== "class_extends"){
-                        node = node?.parent;
-                    }
-
-                    // Assign node to the parent array
-                    const root = nodeGraph.find(root => root.data.name === node?.data.name);
-                    if(root){
-                        tree[root.data.name].push(n);
-                    }
-                });
+                const tree = scraper.parseNodeDirectory(nodes);
 
                 // Write data to file
                 const returnData: { [key: string]: { name: string | undefined, arguments: string | undefined, signature: string | undefined}[]} = {};
@@ -352,11 +316,10 @@ this.name = "testScope";
                         };
                     });
                 }
-                fs.writeFileSync(__dirname + "/../../test-data/app-node-tree.json", JSON.stringify(returnData, undefined, "\t"));
                 
                 // Check that the nodes are assigned correctly
                 expect(returnData["Animal"].length).toEqual(11);
-                expect(returnData["Dog"].length).toEqual(8);
+                expect(returnData["Dog"].length).toEqual(10);
                 expect(returnData["Person"].length).toEqual(5);
                 expect(returnData["initDogs"].length).toEqual(1);
                 expect(returnData["addMyDogs"].length).toEqual(1);

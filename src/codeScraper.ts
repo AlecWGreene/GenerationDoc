@@ -187,7 +187,66 @@ export default class CodeScraper {
             };
         });
 
-        // Write node directory to file
+
+        return nodeDirectory;
+    }
+
+    // Convert a node directory into a readable tree of code expressions
+    parseNodeDirectory(directory: { [key: number]: { value: Node, keyRef: number } }): { [key: string]: Node[] } {
+        // Get nodes with undefined parents
+        const entries = Object.values(directory);
+        let rootNodes = entries.filter(obj => obj.value.parent === undefined).map(obj => obj.value);
+
+        // Remove nodes which have parents in their data except for classes
+        rootNodes.forEach(node => {
+            if (node.data.parent && node.data.signature !== "class_extends") {
+                node.parent = entries.find(ent => ent.value.data.name === node.data.parent)?.value;
+            }
+        });
+        rootNodes = rootNodes.filter(node => node.parent === undefined);
+
+        // Parse each root node a tree root
+        let tree: {[key: string]: Node[]} = {};
+        rootNodes.forEach(n => {
+            tree[n.data.name] = [n];
+        });
+
+        // Distribute nodes to their parents
+        Object.values(directory).forEach(({ value }) => {
+            const n = value;
+
+            // Skip root nodes
+            if(rootNodes.includes(n)) {
+                return;
+            }
+            // Skip placeholder nodes
+            else if(n.data.name === "##PLACEHOLDER##"){
+                return;
+            }
+
+            // Find the parent
+            let node: Node | undefined = n;
+            while(node?.parent && node.data.signature !== "class_extends"){
+                node = node?.parent;
+            }
+
+            // Skip duplicates under the same parent
+            if (tree[node.data.name].find(existingNode => existingNode.data.name === n.data.name )) {
+                return;
+            }
+
+            // Assign node to the parent array
+            const root = rootNodes.find(root => root.data.name === node?.data.name);
+            if(root){
+                tree[root.data.name].push(n);
+            }
+        });
+
+        return tree;
+    }
+
+    // Write node directory to file
+    printNodeDirectoryToFile(nodeDirectory: { [key: number]: { value: Node, keyRef: number } }): void {
         const visited = new WeakSet();
         function reduceDirectoryNode(this: any, key: string, value: any){
             if (typeof value === "object" && value !== null) {
@@ -211,23 +270,21 @@ export default class CodeScraper {
             return value;
         }
         fs.writeFileSync(__dirname + `/../test-data/app-node-directory.json`, JSON.stringify(nodeDirectory, reduceDirectoryNode, "\t"));
-        return nodeDirectory;
     }
 
-    // Convert a node directory into a readable tree of code expressions
-    parseNodeDirectory(directory: { [key: number]: { value: Node, keyRef: number } }): Node[] {
-        // Get nodes with undefined parents
-        const entries = Object.values(directory);
-        let rootNodes = entries.filter(obj => obj.value.parent === undefined).map(obj => obj.value);
-
-        // Remove nodes which have parents in their data except for classes
-        rootNodes.forEach(node => {
-            if (node.data.parent && node.data.signature !== "class_extends") {
-                node.parent = entries.find(ent => ent.value.data.name === node.data.parent)?.value;
-            }
-        });
-        rootNodes = rootNodes.filter(node => node.parent === undefined);
-
-        return rootNodes;
+    // Print a node directory to a json
+    printNodeTreeToFile(tree: { [key: string]: Node[]}, path: string): void {
+         // Write data to file
+         const returnData: { [key: string]: { name: string | undefined, arguments: string | undefined, signature: string | undefined}[]} = {};
+         for (const rootName in tree) {
+             returnData[rootName] = tree[rootName].map(obj => {
+                 return {
+                     name: obj.data.name,
+                     arguments: obj.data.arguments,
+                     signature: obj.data.signature
+                 };
+             });
+         }
+         fs.writeFileSync(__dirname + path, JSON.stringify(returnData, undefined, "\t"));
     }
 }
